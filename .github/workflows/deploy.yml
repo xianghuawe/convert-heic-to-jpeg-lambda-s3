@@ -30,19 +30,19 @@ jobs:
       - name: Build deployment package
         run: |
           # 按照 build.sh 的步骤执行
-          mkdir -p convert-heic
-          pip install -r requirements.txt --target=./convert-heic
-          cd convert-heic
-          zip -r ../convert-heic.zip .
+          mkdir -p convertheic
+          pip install -r requirements.txt --target=./convertheic
+          cd convertheic
+          zip -r ../convertheic.zip .
           cd ..
-          zip convert-heic.zip lambda_function.py
+          zip convertheic.zip lambda_function.py
 
       # 4. 上传 ZIP 包作为构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: convert-heic
-          path: convert-heic.zip
+          name: convertheic
+          path: convertheic.zip
 
       # 5. 构建完成通知
       - name: Build completed
