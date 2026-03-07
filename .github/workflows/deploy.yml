@@ -1,0 +1,56 @@
+name: Deploy Lambda Function
+
+on:
+  push:
+    branches:
+      - main  # 或你的主分支名称
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        architecture: [x64]
+    
+    steps:
+      # 1. 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 设置 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'  # 与 Lambda 运行时匹配
+          architecture: ${{ matrix.architecture }}
+
+      # 3. 安装依赖并构建
+      - name: Build deployment package
+        run: |
+          # 按照 build.sh 的步骤执行
+          mkdir -p convert-heic
+          pip install -r requirements.txt --target=./convert-heic
+          cd convert-heic
+          zip -r ../convert-heic.zip .
+          cd ..
+          zip convert-heic.zip lambda_function.py
+
+      # 4. 上传 ZIP 包作为构建产物
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: convert-heic
+          path: convert-heic.zip
+
+      # 5. 创建 GitHub Release 并上传 ZIP 包
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          files: convert-heic.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
