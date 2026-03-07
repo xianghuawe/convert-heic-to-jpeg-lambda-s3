@@ -1,4 +1,4 @@
-name: Build Lambda Function Zip
+name: Deploy Lambda Function
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     strategy:
       matrix:
         architecture: [x64]
@@ -29,20 +29,32 @@ jobs:
       # 3. 安装依赖并构建
       - name: Build deployment package
         run: |
-          # 按照 build.sh 的步骤执行
-          mkdir -p convertheic
-          pip install -r requirements.txt --target=./convertheic
-          cd convertheic
-          zip -r ../convertheic.zip .
+          # 确保清理之前的构建产物
+          rm -rf convert-heic convert-heic.zip
+          
+          # 创建临时目录
+          mkdir -p convert-heic
+          
+          # 安装依赖到临时目录
+          pip install -r requirements.txt --target=./convert-heic
+          
+          # 复制主脚本到临时目录
+          cp lambda_function.py convert-heic/
+          
+          # 进入临时目录并打包
+          cd convert-heic
+          zip -r ../convert-heic.zip .
           cd ..
-          zip convertheic.zip lambda_function.py
+          
+          # 验证ZIP包内容
+          unzip -l convert-heic.zip | head -20
 
       # 4. 上传 ZIP 包作为构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: convertheic
-          path: convertheic.zip
+          name: convert-heic
+          path: convert-heic.zip
 
       # 5. 构建完成通知
       - name: Build completed
