@@ -1,4 +1,4 @@
-name: Deploy Lambda Function
+name: Build Lambda Function Zip
 
 on:
   push:
@@ -44,13 +44,6 @@ jobs:
           name: convert-heic
           path: convert-heic.zip
 
-      # 5. 创建 GitHub Release 并上传 ZIP 包
-      - name: Create Release
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}
-          name: Release v${{ github.run_number }}
-          files: convert-heic.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 5. 构建完成通知
+      - name: Build completed
+        run: echo "Build completed successfully! ZIP package is available as artifact."
