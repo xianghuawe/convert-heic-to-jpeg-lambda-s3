@@ -40,18 +40,13 @@ jobs:
           
           # 复制主脚本到临时目录
           cp lambda_function.py convert-heic/
-          
-          # 进入临时目录并打包
-          cd convert-heic
-          zip -r ../convert-heic.zip .
 
       # 4. 上传 ZIP 包作为构建产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: convert-heic-package
+          name: convert-heic
           path: convert-heic.zip
-          if-no-files-found: error
 
       # 5. 构建完成通知
       - name: Build completed
