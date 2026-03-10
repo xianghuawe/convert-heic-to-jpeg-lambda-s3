@@ -55,20 +55,29 @@ def lambda_handler(event, context):
             # Convert WebP to JPG
             image = Image.open(io.BytesIO(file_data))
 
-        # Save the JPG to memory
-        jpg_buffer = io.BytesIO()
-        image.save(jpg_buffer, format="JPEG")
-        jpg_buffer.seek(0)
+        # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
+        if image.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            if image.mode in ('RGBA', 'LA'):
+                background.paste(image, mask=image.split()[-1])
+                image = background
 
-        # Upload JPG to S3
+        # Save the PNG to memory
+        png_buffer = io.BytesIO()
+        image.save(png_buffer, format="PNG")
+        png_buffer.seek(0)
+
+        # Upload PNG to S3
         s3_client.upload_fileobj(
-            jpg_buffer,
+            png_buffer,
             bucket,
             key,
-            ExtraArgs={"ContentType": "image/jpeg"},
+            ExtraArgs={"ContentType": "image/png"},
         )
 
-        print(f"Successfully converted {key}")
+        print(f"Successfully converted {key} to PNG")
         return {
             "statusCode": 200,
             "body": json.dumps(
