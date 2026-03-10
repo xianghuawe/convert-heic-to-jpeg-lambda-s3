@@ -40,21 +40,6 @@ jobs:
           
           # 复制主脚本到临时目录
           cp lambda_function.py convert-heic/
-          
-          # 清理不必要的文件（减少包大小）
-          find convert-heic -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
-          find convert-heic -type d -name "test*" -exec rm -rf {} + 2>/dev/null || true
-          find convert-heic -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find convert-heic -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null || true
-          find convert-heic -type f -name "*.pyc" -delete 2>/dev/null || true
-          find convert-heic -type f -name "*.pyo" -delete 2>/dev/null || true
-          find convert-heic -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-          find convert-heic -type d -name "docs" -exec rm -rf {} + 2>/dev/null || true
-          find convert-heic -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true
-          find convert-heic -type f -name "*.md" -delete 2>/dev/null || true
-          
-          # 显示最终大小
-          du -sh convert-heic
 
       # 4. 上传 ZIP 包作为构建产物
       - name: Upload artifact

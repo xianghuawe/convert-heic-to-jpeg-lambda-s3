@@ -2,7 +2,8 @@ import json
 import boto3
 from PIL import Image
 import pillow_heif
-import io
+import os
+import gc
 
 def lambda_handler(event, context):
     s3_client = boto3.client("s3")
@@ -37,14 +38,14 @@ def lambda_handler(event, context):
             return
 
     try:
-        # Download the full file for conversion
-        response = s3_client.get_object(Bucket=bucket, Key=key)
-        file_data = response["Body"].read()
+        # Download the full file to /tmp (reduce memory usage)
+        temp_input = f"/tmp/{os.path.basename(key)}"
+        s3_client.download_file(bucket, key, temp_input)
 
         # Convert based on detected type
         if conversion_type == 'heic':
-            # Convert HEIC to JPG
-            heif_file = pillow_heif.read_heif(file_data)
+            # Convert HEIC to image
+            heif_file = pillow_heif.read_heif(temp_input)
             image = Image.frombytes(
                 heif_file.mode,
                 heif_file.size,
@@ -52,10 +53,10 @@ def lambda_handler(event, context):
                 "raw",
             )
         else:  # webp
-            # Convert WebP to JPG
-            image = Image.open(io.BytesIO(file_data))
+            # Convert WebP to image
+            image = Image.open(temp_input)
 
-        # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
+        # Convert RGBA to RGB if necessary
         if image.mode in ('RGBA', 'LA', 'P'):
             background = Image.new('RGB', image.size, (255, 255, 255))
             if image.mode == 'P':
@@ -64,18 +65,30 @@ def lambda_handler(event, context):
                 background.paste(image, mask=image.split()[-1])
                 image = background
 
-        # Save the PNG to memory
-        png_buffer = io.BytesIO()
-        image.save(png_buffer, format="PNG")
-        png_buffer.seek(0)
+        # Save to /tmp instead of memory
+        temp_output = temp_input.rsplit('.', 1)[0] + '.png'
+        image.save(temp_output, format="PNG")
+        
+        # Close and free memory
+        image.close()
+        del image
+        gc.collect()
 
         # Upload PNG to S3
-        s3_client.upload_fileobj(
-            png_buffer,
-            bucket,
-            key,
-            ExtraArgs={"ContentType": "image/png"},
-        )
+        with open(temp_output, 'rb') as f:
+            s3_client.upload_fileobj(
+                f,
+                bucket,
+                key,
+                ExtraArgs={"ContentType": "image/png"},
+            )
+
+        # Clean up temp files
+        if os.path.exists(temp_input):
+            os.remove(temp_input)
+        if os.path.exists(temp_output):
+            os.remove(temp_output)
+        gc.collect()
 
         print(f"Successfully converted {key} to PNG")
         return {
